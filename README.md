@@ -1,4 +1,3 @@
-```markdown
 # Spring Sensor Monitoring Clone Study
 
 Spring Boot 기반 백엔드 아키텍처와 실시간 데이터 처리 구조를 학습하기 위해  
@@ -128,4 +127,3 @@ Spring Boot 기반 프로젝트 구조 이해
 
 본 레포지토리는 **스터디 정리 및 학습 코드 일부만 포함**하며  
 전체 프로젝트 구현 코드는 별도 환경에서 관리됩니다.
-```
