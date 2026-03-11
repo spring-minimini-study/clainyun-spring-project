@@ -30,10 +30,10 @@
   앱을 실행할 때 제일 먼저 돌아가는 클래스. `main`이 여기 있고, 여기서 Spring이 설정 읽고 DB 연결하고 컨트롤러 올림.
 - **DB**  
   처음엔 내 PC에 깔아둔 MariaDB(포트 3306) 썼다가 지우고, 나중에 Docker로 띄운 MySQL(포트 3307)로 바꿈
-- **“잘 떴는지” 확인**  
+- **잘 떴는지 확인**  
   Run Configuration에서 **Active profiles**를 `local`로 둔다는 뜻 = “지금은 로컬용 설정(application-local.yml) 쓴다.”  
   서버 띄운 뒤 브라우저나 curl로 **`http://localhost:8080/actuator/health`** 로 접속해서 **`{"status":"UP"}`** 이 나오면, “서버가 떴고 DB 연결까지 됐다”는 뜻이다.  
-  (Actuator = Spring이 제공하는 헬스·메트릭용 URL. `/actuator/health`는 “이 앱 살아 있어?” 확인용)
+  (Actuator = Spring이 제공하는 헬스·메트릭용 URL. `/actuator/health`는 “이 앱 살아있어?” 확인용)
 
 ### 1.2 Docker MySQL 설정
 
@@ -49,7 +49,7 @@
 - **DBeaver**  
   DB 내용 보려고 쓰는 클라이언트.  
   Host 127.0.0.1, Port 3307, DB monitory_clone, user /  로 연결하면 Docker MySQL이 보인다.
-- **Access denied 나왔을 때**  
+- **DBeaver에서 Access denied 나왔을 때**  
   Mac+Rancher에서는 DBeaver가 127.0.0.1로 접속해도 MySQL 입장에선 192.168.65.1로 보인다.  
   MySQL은 “user 이름 + 접속한 IP(host)”로 계정을 구분해서, 그 IP 전용 계정(`user@'192.168.65.1'`)을 컨테이너 안에서 만들어 주고, 인증 방식은 `mysql_native_password`로 맞춰 주면 접속된다.
 
@@ -60,13 +60,13 @@
 ### 2.1 build.gradle
 
 **역할**  
-“이 프로젝트는 Java 몇으로 할지, Spring Boot 몇 버전 쓰고, **어떤 라이브러리** 쓸지”를 여기서 정한다.  
+이 프로젝트는 Java 몇으로 할지, Spring Boot 몇 버전 쓰고, **어떤 라이브러리** 쓸지를 여기서 정한다.  
 Gradle이 이 파일 읽고 필요한 jar 다운받아서 컴파일·실행 가능한 결과물 만든다.
 
 | 구분 | 뜻 / 왜 이렇게 쓰나 |
 |------|---------------------|
 | **plugins** | `java` = Java 프로젝트로 인식. `spring-boot` = 실행 가능한 jar 만들고 main 찾아서 실행. `dependency-management` = 라이브러리 버전을 Spring Boot에 맞춰 자동으로 맞춰 줌. |
-| **implementation** | “실제 서버 돌릴 때 필요”한 것.  \n- Web(API)  \n- JPA(DB 매핑)  \n- Security(나중에 로그인)  \n- Actuator(헬스 체크 URL)  \n컴파일할 때도 쓰이고 실행 파일에도 들어감. |
+| **implementation** | 실제 서버 돌릴 때 필요한 것.  \n- Web(API)  \n- JPA(DB 매핑)  \n- Security(나중에 로그인)  \n- Actuator(헬스 체크 URL)  \n컴파일할 때도 쓰이고 실행 파일에도 들어감. |
 | **compileOnly / annotationProcessor** | “컴파일할 때만” 쓰는 도구. Lombok은 @Getter 같은 걸 보고 getter 메서드 만들어 주는 역할만 해서, 실행 파일에는 안 넣음. |
 | **runtimeOnly** | “실행할 때만” 필요. MySQL Connector = MySQL이랑 통신하는 드라이버. 코드에서는 JDBC 인터페이스만 쓰고, 실제로 MySQL 붙을 때 이게 필요함. |
 | **testImplementation** | 테스트 코드에서만 쓰는 라이브러리. 본문 빌드에는 안 넣고, 테스트 돌릴 때만 씀. |
@@ -188,6 +188,7 @@ docker run -d --name mysql-monitory-clone \
 
 docker ps
 ```
+도커 띄우고 `docker ps`로 도커 잘 돌아가고 있는지 확인하기
 
 ```bash
 docker exec -it mysql-monitory-clone mysql -uroot -p -e "
@@ -196,6 +197,16 @@ GRANT ALL PRIVILEGES ON monitory_clone.* TO 'user'@'192.168.65.1';
 FLUSH PRIVILEGES;
 "
 ```
+| 부분                     | 뜻                          |
+| ---------------------- | -------------------------- |
+| `docker exec`          | **이미 실행중인 컨테이너 안에서 명령 실행** |
+| `-it`                  | 터미널처럼 상호작용 가능하게 실행         |
+| `mysql-monitory-clone` | 명령을 실행할 **컨테이너 이름**        |
+| `mysql`                | 컨테이너 안의 **mysql 클라이언트 실행** |
+| `-uroot`               | root 계정으로 로그인              |
+| `-p`                   | root **비밀번호 입력 받음**        |
+| `-e`                   | 뒤에 있는 **SQL을 바로 실행**       |
+
 
 **DBeaver에서 Docker DB 보려면**
 
@@ -220,7 +231,7 @@ Host `127.0.0.1`, Port `3307`, Database `monitory_clone`, User `user`, Password 
 
 ## 트러블슈팅 정리 — Docker MySQL DBeaver 접속 실패
 
-### 증상
+### 문제
 
 ```
 Access denied for user 'user'@'192.168.65.1'
@@ -240,14 +251,9 @@ FLUSH PRIVILEGES;
 
 ### 배운 점
 
-Docker 환경에서는 **`localhost` ≠ DB가 인식하는 실제 접속 IP(host)** 일 수 있다.
+Docker 환경에서는 **`localhost` ≠ DB가 인식하는 실제 접속 IP(host)**
 (특히 Mac + Docker Desktop / Rancher Desktop)
 
 ---
-
-## 다음 주 체크리스트
-
-* Docker(서버 실행) / Flyway(테이블·스키마 관리)
-* `localhost:3306`(로컬 DB) / `localhost:3307`(Docker DB)
 
 DB 접속이 꼬였을 때는 위의 `트러블슈팅 해결 과정 요약` 순서를 그대로 따라가면 된다.
